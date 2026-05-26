@@ -1,0 +1,101 @@
+PANDUAN PENILAIAN INDIVIDU
+Fokus: Penggunaan Query PostgreSQL / PostGIS pada Proyek SIG Web-Mobile
+Program Studi D-IV TRPL — Politeknik Negeri Medan
+A.  Identitas Mahasiswa
+Nama Mahasiswa	Rasyid Kurniawan
+NIM	2305181077
+Kelas / Semester	TRPL-6A
+Judul Proyek	Heatmap Peta Kebisingan di Politeknik Negeri Medan
+Tanggal Penilaian
+Dosen Penilai	Donny Sanjaya, M.Kom
+B.  Tipe Vektor yang Dipilih (pilih salah satu)
+Setiap mahasiswa wajib memilih satu tipe vektor sebagai fokus implementasi query PostgreSQL/PostGIS. Beri tanda centang pada salah satu kotak di bawah ini:
+
+Pilih	Tipe Vektor	Contoh Studi Kasus pada Proyek
+☐	POINT	Lokasi sekolah/ATM/halte/wisata, marker pengguna, geocoding alamat
+☐
+LINE	Jalur jalan, sungai, rute angkutan, jaringan utilitas, trayek perjalanan
+☐	POLYGON	Batas wilayah/kelurahan, area lahan, zonasi, kawasan banjir/rawan bencana
+C.  Komponen Penilaian Individu
+Berikan skor 0 - 100 pada kolom Skor. Nilai akhir tiap komponen dihitung dengan rumus: Bobot (%) × Skor / 100. Total nilai akhir adalah jumlah seluruh nilai komponen.
+
+No	Komponen Penilaian	Bobot	Skor (0-100)	Nilai = Bobot × Skor / 100
+1	Justifikasi Pemilihan Tipe Vektor
+(alasan teknis dan kesesuaian dengan studi kasus)	10%
+2	Desain Skema Tabel PostGIS
+(tipe geometry, SRID, constraint, normalisasi)	15%
+3	Query DML Spasial
+(INSERT/UPDATE/DELETE dengan ST_GeomFromText, ST_MakePoint, dll)	15%
+4	Query Analisis Spasial (FOKUS UTAMA)
+(ST_Distance/ST_Length/ST_Area/ST_Within/ST_Intersects, dll)	30%
+5	Optimasi Query
+(spatial index GIST, EXPLAIN ANALYZE, view/materialized view)	10%
+6	Integrasi Query ke Aplikasi
+(pemanggilan dari backend API, parameterized query, anti-injection)	10%
+7	Penjelasan & Tanya Jawab
+(menjelaskan logika query, alternatif, dan keputusan teknis)	10%
+	TOTAL NILAI AKHIR INDIVIDU	100%
+D.  Query PostGIS Wajib (sesuai tipe vektor yang dipilih)
+Mahasiswa wajib mendemonstrasikan minimal 4 query berikut sesuai tipe vektor yang dipilih. Query harus dijalankan langsung di hadapan dosen penguji menggunakan psql, pgAdmin, atau dieksekusi dari aplikasi.
+
+Tipe	Query Wajib Didemonstrasikan	Contoh Sintaks (PostGIS)
+POINT	1. Insert titik dari koordinat (lat, lon)
+2. Cari titik terdekat (nearest neighbor)
+3. Cari titik dalam radius tertentu
+4. Hitung jarak antar dua titik	ST_MakePoint(lon,lat)::geography
+ORDER BY geom <-> ST_Point(...)
+ST_DWithin(a.geom, b.geom, 500)
+ST_Distance(a.geom, b.geom)
+LINE	1. Insert garis dari array titik
+2. Hitung panjang jalur (meter)
+3. Cari garis yang berpotongan area
+4. Buffer di sekitar garis	ST_GeomFromText('LINESTRING(...)',4326)
+ST_Length(geom::geography)
+ST_Intersects(line.geom, area.geom)
+ST_Buffer(line.geom::geography, 50)
+POLYGON	1. Insert poligon dari koordinat
+2. Hitung luas area (m² / hektar)
+3. Cek titik berada di dalam poligon
+4. Tampilkan poligon yang berpotongan	ST_GeomFromText('POLYGON(...)',4326)
+ST_Area(geom::geography)
+ST_Within(point.geom, poly.geom)
+ST_Intersects(a.geom, b.geom)
+E.  Rubrik Skor untuk Query Analisis Spasial (komponen utama, bobot 30%)
+Skor	Predikat	Deskripsi Kualitas Query
+85 - 100	Sangat Baik	Query kompleks (≥ 4 fungsi spasial), efisien, hasil akurat, menggunakan spatial index, mahasiswa mampu menjelaskan setiap langkah query
+70 - 84	Baik	Query benar dengan 2-3 fungsi spasial, hasil akurat, mampu menjelaskan dengan baik meski belum menerapkan optimasi
+55 - 69	Cukup	Query dasar berjalan, fungsi spasial terbatas, ada kesalahan minor pada SRID/proyeksi atau hasil kurang akurat
+< 55	Kurang	Query tidak berjalan, atau hanya menggunakan SQL biasa tanpa fungsi PostGIS, atau tidak mampu menjelaskan
+F.  Daftar Pertanyaan Verifikasi
+Dosen penilai menanyakan minimal 4 dari 7 pertanyaan berikut. Mahasiswa harus mampu menjawab tanpa membaca laporan.
+
+No	Pertanyaan Verifikasi (centang bila mahasiswa mampu menjawab)	✓ / ✗
+1	Mengapa memilih tipe vektor tersebut? Apa keterbatasannya?
+2	Apa SRID yang digunakan dan mengapa? (4326 vs 3857 / UTM)
+3	Perbedaan tipe geometry dan geography pada PostGIS
+4	Bagaimana spatial index GIST mempercepat query?
+5	Tunjukkan satu query analisis spasial dan jelaskan baris per baris
+6	Bagaimana mencegah SQL injection saat memanggil query dari backend?
+7	Bagaimana hasil query dikirim ke aplikasi web/mobile? (GeoJSON, WKT, dll)
+G.  Konversi Nilai Huruf
+≥ 85	80-84	75-79	70-74	65-69	< 65
+A	AB	B	BC	C	D / E
+H.  Catatan Dosen Penilai
+Tuliskan kelebihan, kekurangan, dan saran perbaikan terkait penguasaan query PostgreSQL/PostGIS:
+...............................................................................................................................................
+...............................................................................................................................................
+...............................................................................................................................................
+...............................................................................................................................................
+
+ 	Medan, ......................................
+Dosen Penilai,
+
+
+
+Donny Sanjaya, M.Kom
+NIP. 199010302024061001
+
+
+ 
+Lampiran
+

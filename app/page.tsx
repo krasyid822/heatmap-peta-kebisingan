@@ -1,65 +1,163 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import Head from 'next/head';
+import ControlPanel from './components/ControlPanel';
+import MapComponent from './components/MapComponent';
+import { useNoiseData } from './hooks/useNoiseData';
+import { useAnalysis } from './hooks/useAnalysis';
+
+interface Filters {
+    startDate: string;
+    endDate: string;
+    startHour: number;
+    endHour: number;
+    minAlt: number;
+    maxAlt: number;
+}
+
+interface Metadata {
+    minTime: number | null;
+    maxTime: number | null;
+    minAlt: number;
+    maxAlt: number;
+}
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    const mapInstanceRef = useRef<any>(null);
+    
+    // Menggunakan custom hooks
+    const { noiseData, loading, error, fetchDataFromDB } = useNoiseData();
+    const { analysisResults, isAnalyzing, handleAnalysisStart, handleAnalysisComplete, handleAnalysisClear } = useAnalysis(mapInstanceRef);
+
+    const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    
+    // Toggle Layer State
+    const [showHeatmap, setShowHeatmap] = useState(true);
+    const [showMarkers, setShowMarkers] = useState(false);
+
+    const [filters, setFilters] = useState<Filters>({
+        startDate: '',
+        endDate: '',
+        startHour: 0,
+        endHour: 23,
+        minAlt: 0,
+        maxAlt: 5000, 
+    });
+
+    const [metadata, setMetadata] = useState<Metadata>({
+        minTime: null,
+        maxTime: null,
+        minAlt: 0,
+        maxAlt: 5000,
+    });
+
+    useEffect(() => {
+        const fetchMetadata = async () => {
+            try {
+                const response = await fetch('/api/metadata');
+                const data = await response.json();
+                if (data.minTime && data.maxTime) {
+                    const initialFilters = {
+                        startDate: new Date(data.minTime).toISOString().split('T')[0],
+                        endDate: new Date(data.maxTime).toISOString().split('T')[0],
+                        minAlt: data.minAlt,
+                        maxAlt: data.maxAlt,
+                        startHour: 0,
+                        endHour: 23,
+                    };
+                    setMetadata(data);
+                    setFilters(initialFilters);
+                    fetchDataFromDB(initialFilters); // Fetch data awal setelah metadata didapat
+                }
+            } catch (e) {
+                console.error("Gagal mengambil metadata:", e);
+            }
+        };
+        fetchMetadata();
+    }, [fetchDataFromDB]);
+
+    const handleMapReady = (map: any) => {
+        mapInstanceRef.current = map;
+    };
+
+    const handleFilterChange = (newFilters: Partial<Filters>) => {
+        const updatedFilters = { ...filters, ...newFilters };
+        setFilters(updatedFilters);
+        fetchDataFromDB(updatedFilters);
+    };
+
+    const handleFileUploadToServer = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        event.target.value = '';
+
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/api/upload', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'Gagal mengunggah file.');
+            alert(result.message);
+            fetchDataFromDB(filters);
+        } catch (err: any) {
+            alert('Upload error: ' + err.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const zoomToData = () => {
+        if (noiseData.length > 0 && mapInstanceRef.current) {
+            // @ts-ignore
+            const L = window.L;
+            if (L) {
+                const bounds = L.latLngBounds(noiseData.map(p => [p.latitude, p.longitude]));
+                mapInstanceRef.current.fitBounds(bounds);
+            }
+        }
+    };
+
+    return (
+        <div className="flex h-screen font-sans bg-gray-100 dark:bg-gray-800 overflow-hidden">
+            <Head>
+                <title>Heatmap Peta Kebisingan</title>
+            </Head>
+
+            <ControlPanel
+                filters={filters}
+                metadata={metadata}
+                onFilterChange={handleFilterChange}
+                onFileUpload={handleFileUploadToServer}
+                onReload={() => fetchDataFromDB(filters)}
+                onZoom={zoomToData}
+                isLoading={loading}
+                isUploading={uploading}
+                isAnalyzing={isAnalyzing}
+                error={error}
+                dataCount={noiseData.length}
+                analysisCount={analysisResults.length}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={() => setSidebarCollapsed(!isSidebarCollapsed)}
+                onClearAnalysis={handleAnalysisClear}
+                showHeatmap={showHeatmap}
+                onToggleHeatmap={setShowHeatmap}
+                showMarkers={showMarkers}
+                onToggleMarkers={setShowMarkers}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            <MapComponent 
+                rawData={noiseData}
+                onMapReady={handleMapReady}
+                isSidebarCollapsed={isSidebarCollapsed}
+                onAnalysisStart={handleAnalysisStart}
+                onAnalysisComplete={handleAnalysisComplete}
+                onAnalysisClear={handleAnalysisClear}
+                showHeatmap={showHeatmap}
+                showMarkers={showMarkers}
+            />
         </div>
-      </main>
-    </div>
-  );
+    );
 }
