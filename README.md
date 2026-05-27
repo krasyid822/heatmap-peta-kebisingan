@@ -39,4 +39,23 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Deploy on Neon.tech
 
+```postgres
+-- 1. Mengaktifkan fitur PostGIS
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- 2. Membuat tabel pengukuran kebisingan
+CREATE TABLE noise_measurements (
+    id BIGSERIAL PRIMARY KEY,
+    timestamp_utc TIMESTAMP NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    altitude_m DOUBLE PRECISION,
+    noise_db DOUBLE PRECISION NOT NULL,
+    geom geometry(Point, 4326) NOT NULL
+);
+
+-- 3. Membuat indeks spasial GiST
+CREATE INDEX idx_noise_measurements_geom ON noise_measurements USING GIST (geom);
+```
+
 https://console.neon.tech/app/projects/aged-salad-39708577
